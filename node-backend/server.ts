@@ -6,10 +6,11 @@ import { auth } from '.'
 const Corestore = require("corestore")
 
 const PORT = process.env.PORT || 5000
+const OWNER_ADDRESS = '0x'
 const app = express();
 
 const corsOptions = {
-    origin: ['http://localhost:3000',"*"],
+    origin: ['http://localhost:3000',"http://155.138.139.22"],
 };
   
 app.use(cors(corsOptions));
@@ -34,6 +35,11 @@ const ethAuthProofMiddleware = async (req, res, next) => {
 app.use('/bid', ethAuthProofMiddleware);
 
 app.post('/bid', async (req: any, res: any) => {
+    console.log({
+        bidder: req.body.address,
+        amount: req.body.amount,
+        tokenID: req.body.tokenID,
+    })
     try{
         await bids.append({
             bidder: req.body.address,
@@ -46,18 +52,53 @@ app.post('/bid', async (req: any, res: any) => {
     }
 })
 
-app.get('/bids', async (req: any, res: any) => {
+app.post('/bids', async (req: any, res: any) => {
     try{
-        const fullStream = bids.createReadStream()
-        const bidsRaw = []
-        for await (const bid of fullStream) {
-            bidsRaw.push({
-                bidder: bid.bidder,
-                amount: bid.amount,
-                tokenID: bid.tokenID,
-            })
-        }
-        res.send({bids: bidsRaw, status: 200})
+        // if(await auth(OWNER_ADDRESS, req.body.ethAuthProofString)){
+            const fullStream = bids.createReadStream()
+            const bidsTemp: any = {}
+            for await (const bid of fullStream) {
+                if(!bidsTemp[bid.tokenID]){
+                    bidsTemp[bid.tokenID] = []
+                }else {
+                    bidsTemp[bid.tokenID].push({
+                        bidder: bid.bidder,
+                        amount: bid.amount,
+                    })
+                }
+            }
+            const prices: any = []
+            const bidders: any = []
+            
+            console.log(bidsTemp)
+            
+            for (const key in bidsTemp) {
+                const amounts: any = []
+                if(key != 'undefined'){
+                    if (bidsTemp[key].length > 0) {
+                        if(!bidders[Number(key)]) bidders[Number(key)] = []
+                        bidsTemp[key].forEach((item) => {
+                            amounts.push(Number(item.amount));
+                            bidders[key].push(item.bidder)
+                        });
+                    }
+                    let max = 0
+                    let price = 0
+                    let bidPrices = amounts
+                    for(let i = 0; i < bidPrices.length; i++){
+                        let tempPrice = bidPrices[i]*(bidPrices.length - i)
+                        if(tempPrice > max) {
+                            max = tempPrice 
+                            price = bidPrices[i]
+                        }
+                    }   
+                    prices.push({price: price, max: max, tokenID: key})
+                }
+            }
+            res.send({prices: prices, status: 200, bidders: bidders.filter(bidder => bidder !== null)})
+        // } else {
+            // throw Error('Not Authorized')
+        // }
     }catch(err){
         res.send({msg: JSON.stringify(err), status: 500})
     }
