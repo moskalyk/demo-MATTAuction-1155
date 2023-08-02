@@ -25,6 +25,8 @@ import { BrowserRouter as Router, useLocation, Route, Routes, Link, useParams } 
 
 const defaultTelescopes = [img0, img1, img2, img3, img4, img5, img6, img7, img8, img9, img10, img11, img12]
 
+// const ENDPOINT = 'http://localhost'
+const ENDPOINT = "http://155.138.139.22"
 function useQuery() {
   const { search } = useLocation();
   return React.useMemo(() => new URLSearchParams(search), [search]);
@@ -33,7 +35,7 @@ function useQuery() {
 function EndAuction(){
 
   sequence.initWallet({defaultNetwork: 'polygon'})
-  
+  const [init, setInit] = useState<any>(false)
   const [value, setValue] = useState<any>(0)
   const [columns, setColumns] = useState<any>([])
   const [rows, setRows] = useState<any>([])
@@ -54,10 +56,10 @@ function EndAuction(){
       setEthAuthProofString(details!.proof!.proofString)
     }
   }
-
-  const end = async () => {
+  
+  const getProgress = async () => {
     console.log('ending')
-    const res = await fetch("http://155.138.139.22:5000/bids", {
+    const res = await fetch(ENDPOINT+":5000/bids", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -97,9 +99,50 @@ function EndAuction(){
     }
 
     setRows(rowsTemp)
+
+    return json
+  }
+
+  const end = async () => {
+    const json = await getProgress()
+    const wallet = sequence.getWallet()
+
+    console.log(json)
+    const glassContractAddress = '0xB0bbdDA6De5cD465bA55Aa13Fc16e5083dE1433D'
+  
+      // Craft your transaction
+    const glassInterface = new ethers.utils.Interface([
+      'function bid(address[][] memory owners, uint[] memory tokenIds, uint[] memory prices) onlyAllowed isMinting external'
+    ])
+
+    const tokenIDs = json.prices.map((item: any) => item.tokenID)
+    const prices = json.prices.map((item: any) => item.price)
+
+    // TODO: do an allowance ., check
+    const data = glassInterface.encodeFunctionData(
+      'bid', [json.bidders, tokenIDs, prices]
+    )
+
+    const txn = {
+      to: glassContractAddress,
+      data: data
+    }
+
+    const signer = wallet.getSigner()
+
+    try{
+      const txRes = await signer.sendTransaction([txn])
+      alert('bid closed')
+    } catch(err){
+      console.log(err)
+    }
   }
 
   React.useEffect(() => {
+    if(!init){
+      getProgress()
+      setInit(true)
+    }
   }, [columns])
   
   return(
@@ -149,7 +192,7 @@ function GazingPage() {
 
   const bid = async () => {
       const wallet = sequence.getWallet()
-      const flore1155ContractAddress = '0x62b3d280Ee9AC72BC58331669590D6793657B884'
+      const glass1155ContractAddress = '0xB0bbdDA6De5cD465bA55Aa13Fc16e5083dE1433D'
       const flore20ContractAddress = '0x6efa2ea57b5ea64d088796af72eddc7f5393dd2b'
   
       // Craft your transaction
@@ -159,7 +202,7 @@ function GazingPage() {
 
       // TODO: do an allowance ., check
       const data20 = erc20Interface.encodeFunctionData(
-        'approve', [flore1155ContractAddress, amount]
+        'approve', [glass1155ContractAddress, amount]
       )
 
       const txn1 = {
@@ -171,7 +214,7 @@ function GazingPage() {
 
       try{
         const txRes = await signer.sendTransaction([txn1])
-        const res = await fetch("http://155.138.139.22:5000/bid", {
+        const res = await fetch(ENDPOINT+":5000/bid", {
           method: "POST",
           headers: {
             "content-type": "application/json",
