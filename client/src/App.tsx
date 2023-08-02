@@ -99,7 +99,7 @@ function EndAuction(){
     }
 
     setRows(rowsTemp)
-
+    
     return json
   }
 
