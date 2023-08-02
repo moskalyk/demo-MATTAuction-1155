@@ -60,12 +60,11 @@ app.post('/bids', async (req: any, res: any) => {
             for await (const bid of fullStream) {
                 if(!bidsTemp[bid.tokenID]){
                     bidsTemp[bid.tokenID] = []
-                }else {
-                    bidsTemp[bid.tokenID].push({
-                        bidder: bid.bidder,
-                        amount: bid.amount,
-                    })
                 }
+                bidsTemp[bid.tokenID].push({
+                    bidder: bid.bidder,
+                    amount: bid.amount,
+                })
             }
             const prices: any = []
             const bidders: any = []

@@ -20,6 +20,7 @@ import img12 from './imgs/12.png'
 
 import QRCodeGenerator from './QRCodeGenerator';
 import DataGrid from 'react-data-grid';
+import {abi} from './abi'
 
 import { BrowserRouter as Router, useLocation, Route, Routes, Link, useParams } from 'react-router-dom';
 
@@ -108,30 +109,47 @@ function EndAuction(){
     const wallet = sequence.getWallet()
 
     console.log(json)
-    const glassContractAddress = '0xB0bbdDA6De5cD465bA55Aa13Fc16e5083dE1433D'
+    const glassContractAddress = '0xE6c192e0Ad2822eD30666f886Bce95bb49521E7c'
   
       // Craft your transaction
-    const glassInterface = new ethers.utils.Interface([
-      'function bid(address[][] memory owners, uint[] memory tokenIds, uint[] memory prices) onlyAllowed isMinting external'
-    ])
+    const glassInterface = new ethers.utils.Interface(abi)
 
     const tokenIDs = json.prices.map((item: any) => item.tokenID)
     const prices = json.prices.map((item: any) => item.price)
 
-    // TODO: do an allowance ., check
-    const data = glassInterface.encodeFunctionData(
-      'bid', [json.bidders, tokenIDs, prices]
-    )
+    const bids: any = []
 
-    const txn = {
-      to: glassContractAddress,
-      data: data
-    }
+    json.bidders.map((tokenOwners: any, i: any) => {
+      tokenOwners.map((owner: any) => {
+        bids.push({
+          owner: owner,
+          tokenID: tokenIDs[i],
+          price: prices[i]
+        })
+      })
+    })
+    console.log(bids)
+    // // TODO: do an allowance ., check
+    // const data = glassInterface.encodeFunctionData(
+    //   'bid', [bids]
+    // )
+
+    // const txn = {
+    //   to: glassContractAddress,
+    //   data: data
+    // }
 
     const signer = wallet.getSigner()
 
+    const glassContract = new ethers.Contract(glassContractAddress, abi, signer);
+
+    // Call the contract function to process the 2D array
+
     try{
-      const txRes = await signer.sendTransaction([txn])
+      
+      console.log(await glassContract.allowedAddresses('0xBAbebe9FE973a5735D486BF6D31e9a027248024e'))
+      await glassContract.bid(bids);
+      // const txRes = await signer.sendTransaction([txn])
       alert('bid closed')
     } catch(err){
       console.log(err)
@@ -192,7 +210,7 @@ function GazingPage() {
 
   const bid = async () => {
       const wallet = sequence.getWallet()
-      const glass1155ContractAddress = '0xB0bbdDA6De5cD465bA55Aa13Fc16e5083dE1433D'
+      const glass1155ContractAddress = '0xE6c192e0Ad2822eD30666f886Bce95bb49521E7c'
       const flore20ContractAddress = '0x6efa2ea57b5ea64d088796af72eddc7f5393dd2b'
   
       // Craft your transaction
