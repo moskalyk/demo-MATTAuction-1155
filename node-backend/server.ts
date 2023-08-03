@@ -19,7 +19,7 @@ app.use(bodyParser.json())
 const corestore = new Corestore('./db')
 const bids = corestore.get({name: "bids", valueEncoding: 'json'})
 
-const ethAuthProofMiddleware = async (req, res, next) => {
+const ethAuthProofMiddleware = async (req: any, res: any, next: any) => {
     try{
         console.log(req.body.address, req.body.ethAuthProofString)
         if(await auth(req.body.address, req.body.ethAuthProofString)){
@@ -35,6 +35,7 @@ const ethAuthProofMiddleware = async (req, res, next) => {
 app.use('/bid', ethAuthProofMiddleware);
 
 app.post('/bid', async (req: any, res: any) => {
+    // sometimes the body is empty
     console.log({
         bidder: req.body.address,
         amount: req.body.amount,
@@ -76,7 +77,7 @@ app.post('/bids', async (req: any, res: any) => {
                 if(key != 'undefined'){
                     if (bidsTemp[key].length > 0) {
                         if(!bidders[Number(key)]) bidders[Number(key)] = []
-                        bidsTemp[key].forEach((item) => {
+                        bidsTemp[key].forEach((item: any) => {
                             amounts.push(Number(item.amount));
                             bidders[key].push(item.bidder)
                         });
@@ -94,7 +95,7 @@ app.post('/bids', async (req: any, res: any) => {
                     prices.push({price: price, max: max, tokenID: key})
                 }
             }
-            res.send({prices: prices, status: 200, bidders: bidders.filter(bidder => bidder !== null)})
+            res.send({prices: prices, status: 200, bidders: bidders.filter((bidder: any) => bidder !== null)})
         // } else {
             // throw Error('Not Authorized')
         // }
